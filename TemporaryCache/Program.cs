@@ -15,6 +15,7 @@ namespace TemporaryCache
         static void Main(string[] args)
         {
             Test_WithSignal();
+            Test_WithBusyWaiting();
         }
 
         private static void Test_WithSignal()
@@ -25,7 +26,7 @@ namespace TemporaryCache
             context.Cache.SetObject(pendingFlag, true, TimeSpan.FromSeconds(15));
             var tProducer = Task.Run(() =>
             {
-                Thread.Sleep(5000);
+                Thread.Sleep(5500);
                 context.Cache.SetObject(guid, new { Name = "alex", Created = DateTime.UtcNow }, TimeSpan.FromSeconds(10));
                 context.Cache.Remove(pendingFlag);
                 context.PubSub.Publish(pendingFlag, true);
@@ -38,9 +39,10 @@ namespace TemporaryCache
 
                 if (context.Cache.KeyExists(pendingFlag))
                 {
+
+                    Console.WriteLine("Waiting for data");
                     var sw = new Stopwatch();
                     sw.Start();
-                    Console.WriteLine("Waiting for data");
                     if (handle.Wait(20000))
                     {
                         sw.Stop();
@@ -67,18 +69,22 @@ namespace TemporaryCache
             context.Cache.SetObject(pendingFlag, true, TimeSpan.FromSeconds(15));
             var tProducer = Task.Run(() =>
             {
-                Thread.Sleep(5000);
+                Thread.Sleep(5500);
                 context.Cache.SetObject(guid, new { Name = "alex", Created = DateTime.UtcNow }, TimeSpan.FromSeconds(10));
                 context.Cache.Remove(pendingFlag);
             });
 
             var tConsumer = Task.Run(() =>
             {
+                Console.WriteLine("Waiting for data");
+                var sw = new Stopwatch();
+                sw.Start();
                 while (context.Cache.KeyExists(pendingFlag))
                 {
-                    Console.WriteLine("Waiting for data");
                     Thread.Sleep(1000);
                 }
+                sw.Stop();
+                Console.WriteLine($"Data ready after {sw.Elapsed.TotalMilliseconds} ms");
                 Console.WriteLine(
                     context.Cache.FetchObject(guid, () => new { Name = "alex2", Created = DateTime.UtcNow },
                         TimeSpan.FromSeconds(10)).Name);
