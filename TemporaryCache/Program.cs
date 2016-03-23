@@ -52,11 +52,12 @@ namespace TemporaryCache
                         Console.WriteLine("Timeout waiting for data");
                 }
 
+                context.PubSub.Unsubscribe(pendingFlag);
                 Console.WriteLine(
                     context.Cache.FetchObject(guid, () => new { Name = "alex2", Created = DateTime.UtcNow },
                         TimeSpan.FromSeconds(10)).Name);
             });
-
+            
             Task.WaitAll(tProducer, tConsumer);
             Console.ReadKey();
         }
